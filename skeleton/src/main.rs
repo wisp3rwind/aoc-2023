@@ -3,15 +3,19 @@ use std::fs;
 use std::str::FromStr;
 use thiserror::Error;
 
-#[derive(Clone, Debug, Error)]
+#[derive(Debug, Error)]
 enum AOCError {
-    #[error("Failed to read input")]
-    IOError,
+    #[error("Failed to read input: {path:?}")]
+    IOError {
+        source: std::io::Error,
+        path: Option<PathBuf>,
+    },
 
     #[error("Failed to parse input {msg}")]
     ParseError { msg: Cow<'static, str> },
 
     #[error("This part of the puzzle is not yet implemented")]
+    #[allow(unused)]
     NotYetSolved,
 }
 
@@ -48,10 +52,16 @@ fn part2 (data: &Data) -> AOCResult<i64> {
 }
 
 fn main() -> AOCResult<()> {
-    let data = fs::read_to_string("data/input.txt")
-            .map_err(|_e| AOCError::IOError)?
-            .parse::<Data>()?;
+    let mut input_file = std::env::current_dir()
+        .map_err(|e| AOCError::IOError{source: e, path: None})?;
+    input_file.push("dayXX");
+    input_file.push("data");
+    input_file.push("input.txt");
 
+    let raw_data = fs::read_to_string(&input_file)
+            .map_err(move |source| AOCError::IOError{source, path: Some(input_file)})?;
+
+    let data = raw_data.parse::<Data>()?;
     println!("Part 1: {}", part1(&data)?);
     println!("Part 2: {}", part2(&data)?);
 
@@ -63,12 +73,13 @@ mod test {
     use super::*;
 
     #[test]
-    fn main() -> AOCResult<()> {
-        let data = fs::read_to_string("data/test.txt")
-                .map_err(|_e| AOCError::IOError)?
+    fn part1() -> AOCResult<()> {
+        let path = "data/test1.txt";
+        let data = fs::read_to_string(path)
+                .map_err(|source| AOCError::IOError{source, path: Some(path.into())})?
                 .parse::<Data>()?;
 
-gg      match part1(&data) {
+        match super::part1(&data) {
             Err(AOCError::NotYetSolved) => {},
             Err(_e) => {
                 assert!(false)
@@ -76,7 +87,17 @@ gg      match part1(&data) {
             Ok(result) => assert_eq!(result, 0),
         }
 
-        match part2(&data) {
+        Ok(())
+    }
+
+    #[test]
+    fn part2() -> AOCResult<()> {
+        let path = "data/test2.txt";
+        let data = fs::read_to_string(path)
+                .map_err(|source| AOCError::IOError{source, path: Some(path.into())})?
+                .parse::<Data>()?;
+
+        match super::part2(&data) {
             Err(AOCError::NotYetSolved) => {},
             Err(_e) => {
                 assert!(false)
