@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::cmp::{Ordering, PartialOrd};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -32,15 +33,35 @@ struct Draw {
 
 impl PartialOrd for Draw {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        if self.red < other.red && self.red < other.red && self.red < other.red
-            { Some(Ordering::Less) }
-        else if self.red == other.red&& self.red == other.red&& self.red == other.red
+        if self.red == other.red && self.green == other.green && self.blue == other.blue
             { Some(Ordering::Equal) } 
-        else if self.red < other.red&& self.red < other.red&& self.red < other.red
+        else if self.red <= other.red && self.green <= other.green && self.blue <= other.blue
             { Some(Ordering::Less) }
+        else if self.red >= other.red && self.green >= other.green && self.blue >= other.blue
+            { Some(Ordering::Greater) }
         else
             { None }
 
+    }
+}
+
+impl Draw {
+    fn contains_all<'a>(self, others: impl IntoIterator<Item=&'a Self>) -> bool {
+        others.into_iter()
+            .copied()
+            .all(|d| d <= self)
+    }
+
+    fn union(self, other: Self) -> Self {
+        Self {
+            red: self.red.max(other.red),
+            green: self.green.max(other.green),
+            blue: self.blue.max(other.blue),
+        }
+    }
+
+    fn power(self) -> usize {
+        self.red * self.blue * self.green
     }
 }
 
@@ -51,7 +72,7 @@ impl FromStr for Draw {
         let mut out = Draw::default();
 
         for s in input.split(",") {
-            let (count, color) = dbg!(s.trim().split_once(" ").unwrap());
+            let (count, color) = s.trim().split_once(" ").unwrap();
             let count = count.trim().parse::<usize>().unwrap();
             match color.trim() {
                 "red" => { out.red += count },
@@ -69,7 +90,7 @@ impl FromStr for Draw {
 
 #[derive(Clone, Debug)]
 struct Data {
-    games: Vec<Vec<Draw>>,
+    games: HashMap<usize, Vec<Draw>>,
 }
 
 impl FromStr for Data {
@@ -79,17 +100,25 @@ impl FromStr for Data {
         let games = input
             .lines()
             .map(|l| {
-                l.split_once(":").unwrap()
-                    .1
+                let (id, draws) = l.split_once(":").unwrap();
+                let id = id
+                    .strip_prefix("Game").unwrap()
+                    .trim()
+                    .parse::<usize>().unwrap();
+                let draws = draws
                     .split(";")
                     .map(Draw::from_str)
-                    .collect::<AOCResult<_>>()
+                    .collect::<AOCResult<_>>();
+                match draws {
+                    Ok(draws) => Ok((id, draws)),
+                    Err(e) => Err(e),
+                }
             })
             .collect::<AOCResult<_>>()?;
             //.map(|l| l.parse::<u64>())
             //.collect::<Result<_, _>>()
             //.map_err(|_e| AOCError::ParseError { msg: "...".into() })?;
-        
+
         Ok(Data { games })
     }
 }
@@ -97,16 +126,22 @@ impl FromStr for Data {
 fn part1 (data: &Data) -> AOCResult<usize> {
     let total = Draw { red: 12, green: 13, blue: 14 };
     let sum = data.games.iter()
-        .enumerate()
-        .map(|(id, draws)| 
-            if draws.iter().copied().all(|d| d <= total) { id + 1 } else { 0 }
+        .map(|(&id, draws)| 
+            if total.contains_all(draws) { id } else { 0 }
         )
         .sum();
     Ok(sum)
 }
 
-fn part2 (data: &Data) -> AOCResult<i64> {
-    Err(AOCError::NotYetSolved)
+fn part2 (data: &Data) -> AOCResult<usize> {
+    let total = data.games.iter()
+        .map(|(_, draws)| {
+            draws.iter().copied().reduce(Draw::union).unwrap()
+        })
+        .map(Draw::power)
+        .sum();
+
+    Ok(total)
 }
 
 fn main() -> AOCResult<()> {
@@ -160,7 +195,7 @@ mod test {
             Err(_e) => {
                 assert!(false)
             },
-            Ok(result) => assert_eq!(result, 0),
+            Ok(result) => assert_eq!(result, 2286),
         }
 
         Ok(())
