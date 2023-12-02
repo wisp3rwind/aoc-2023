@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::fs;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -43,6 +44,21 @@ impl FromStr for Data {
     }
 }
 
+trait FromFile<D: FromStr<Err = AOCError>> {
+    fn from_file(path: impl AsRef<Path>) -> AOCResult<D> {
+        let path = path.as_ref();
+        Ok(
+            fs::read_to_string(path)
+            .map_err(|source| {
+                AOCError::IOError{source, path: Some(path.into())}
+            })?
+            .parse::<D>()?
+        )
+    }
+}
+
+impl<D: FromStr<Err = AOCError>> FromFile<D> for D {}
+
 fn part1 (data: &Data) -> AOCResult<i64> {
     Err(AOCError::NotYetSolved)
 }
@@ -58,10 +74,7 @@ fn main() -> AOCResult<()> {
     input_file.push("data");
     input_file.push("input.txt");
 
-    let raw_data = fs::read_to_string(&input_file)
-            .map_err(move |source| AOCError::IOError{source, path: Some(input_file)})?;
-
-    let data = raw_data.parse::<Data>()?;
+    let data = Data::from_file(input_file)?;
     println!("Part 1: {}", part1(&data)?);
     println!("Part 2: {}", part2(&data)?);
 
@@ -72,39 +85,27 @@ fn main() -> AOCResult<()> {
 mod test {
     use super::*;
 
-    #[test]
-    fn part1() -> AOCResult<()> {
-        let path = "data/test1.txt";
-        let data = fs::read_to_string(path)
-                .map_err(|source| AOCError::IOError{source, path: Some(path.into())})?
-                .parse::<Data>()?;
+    macro_rules! aoc_test {
+        (
+            $func:ident,
+            $datapath:literal,
+            $dtype:ty,
+            $compute:path,
+            $expected:literal
+        ) => {
+            #[test]
+            fn $func() -> AOCResult<()> {
+                match $compute(&<$dtype>::from_file($datapath)?) {
+                    Ok(result) => assert_eq!(result, $expected),
+                    Err(AOCError::NotYetSolved) => {},
+                    Err(e) => { return Err(e) },
+                };
 
-        match super::part1(&data) {
-            Err(AOCError::NotYetSolved) => {},
-            Err(_e) => {
-                assert!(false)
-            },
-            Ok(result) => assert_eq!(result, 0),
+                Ok(())
+            }
         }
-
-        Ok(())
     }
 
-    #[test]
-    fn part2() -> AOCResult<()> {
-        let path = "data/test2.txt";
-        let data = fs::read_to_string(path)
-                .map_err(|source| AOCError::IOError{source, path: Some(path.into())})?
-                .parse::<Data>()?;
-
-        match super::part2(&data) {
-            Err(AOCError::NotYetSolved) => {},
-            Err(_e) => {
-                assert!(false)
-            },
-            Ok(result) => assert_eq!(result, 0),
-        }
-
-        Ok(())
-    }
+    aoc_test!(part1, "data/test1.txt", Data, super::part1, 0);
+    aoc_test!(part2, "data/test1.txt", Data, super::part2, 0);
 }
