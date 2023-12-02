@@ -40,11 +40,10 @@ impl FromStr for Data1 {
                 let first = it
                     .find(|c| c.is_ascii_digit())
                     .ok_or(AOCError::ParseError {
-                        msg: "No digit in input line".into()
+                        msg: "No digit in input line".into(),
                     })?;
-                
-                let last = it
-                    .rfind(|c| c.is_ascii_digit());
+
+                let last = it.rfind(|c| c.is_ascii_digit());
 
                 Ok((
                     first.to_digit(10).unwrap() as u8,
@@ -52,7 +51,7 @@ impl FromStr for Data1 {
                 ))
             })
             .collect();
-        
+
         Ok(Data1 { items: items? })
     }
 }
@@ -89,10 +88,9 @@ impl FromStr for Data2 {
         let items: AOCResult<Vec<_>> = input
             .lines()
             .map(|l| {
-                let first = re.find_iter(l).next()
-                    .ok_or(AOCError::ParseError {
-                        msg: "No digit in input line".into()
-                    })?;
+                let first = re.find_iter(l).next().ok_or(AOCError::ParseError {
+                    msg: "No digit in input line".into(),
+                })?;
 
                 // find_iter() only returns non-overlapping matches, so we
                 // can't use the above iterator's last() to obtain the last
@@ -103,50 +101,59 @@ impl FromStr for Data2 {
                     .find_iter(&l_rev)
                     .next()
                     .ok_or(AOCError::ParseError {
-                        msg: "No digit in input line".into()
+                        msg: "No digit in input line".into(),
                     })?
                     .as_str()
-                    .chars().rev().collect::<String>();
+                    .chars()
+                    .rev()
+                    .collect::<String>();
 
-                Ok((
-                    parse_digit(first.as_str())?,
-                    parse_digit(last.as_str())?,
-                ))
+                Ok((parse_digit(first.as_str())?, parse_digit(last.as_str())?))
             })
             .collect();
-        
+
         Ok(Data2 { items: items? })
     }
 }
 
-fn part1 (data: &Data1) -> AOCResult<u64> {
-    let sum = data.items.iter().copied()
+fn part1(data: &Data1) -> AOCResult<u64> {
+    let sum = data
+        .items
+        .iter()
+        .copied()
         .map(|(first, last)| {
             (match last {
-                Some(last) => { first * 10 + last },
-                None => { 11 * first },
+                Some(last) => first * 10 + last,
+                None => 11 * first,
             }) as u64
         })
         .sum();
     Ok(sum)
 }
 
-fn part2 (data: &Data2) -> AOCResult<u64> {
-    let sum = data.items.iter().copied()
-        .map(|(first, last)| { (first * 10 + last) as u64 })
+fn part2(data: &Data2) -> AOCResult<u64> {
+    let sum = data
+        .items
+        .iter()
+        .copied()
+        .map(|(first, last)| (first * 10 + last) as u64)
         .sum();
     Ok(sum)
 }
 
 fn main() -> AOCResult<()> {
-    let mut input_file = std::env::current_dir()
-        .map_err(|e| AOCError::IOError{source: e, path: None})?;
+    let mut input_file = std::env::current_dir().map_err(|e| AOCError::IOError {
+        source: e,
+        path: None,
+    })?;
     input_file.push("day01");
     input_file.push("data");
     input_file.push("input.txt");
 
-    let raw_data = fs::read_to_string(&input_file)
-            .map_err(move |source| AOCError::IOError{source, path: Some(input_file)})?;
+    let raw_data = fs::read_to_string(&input_file).map_err(move |source| AOCError::IOError {
+        source,
+        path: Some(input_file),
+    })?;
 
     let data = raw_data.parse::<Data1>()?;
     println!("Part 1: {}", part1(&data)?);
@@ -165,14 +172,17 @@ mod test {
     fn part1() -> AOCResult<()> {
         let path = "data/test1.txt";
         let data = fs::read_to_string(path)
-                .map_err(|source| AOCError::IOError{source, path: Some(path.into())})?
-                .parse::<Data1>()?;
+            .map_err(|source| AOCError::IOError {
+                source,
+                path: Some(path.into()),
+            })?
+            .parse::<Data1>()?;
 
         match super::part1(&data) {
-            Err(AOCError::NotYetSolved) => {},
+            Err(AOCError::NotYetSolved) => {}
             Err(_e) => {
                 assert!(false)
-            },
+            }
             Ok(result) => assert_eq!(result, 142),
         }
 
@@ -183,14 +193,17 @@ mod test {
     fn part2() -> AOCResult<()> {
         let path = "data/test2.txt";
         let data = fs::read_to_string(path)
-                .map_err(|source| AOCError::IOError{source, path: Some(path.into())})?
-                .parse::<Data2>()?;
+            .map_err(|source| AOCError::IOError {
+                source,
+                path: Some(path.into()),
+            })?
+            .parse::<Data2>()?;
 
         match super::part2(&data) {
-            Err(AOCError::NotYetSolved) => {},
+            Err(AOCError::NotYetSolved) => {}
             Err(_e) => {
                 assert!(false)
-            },
+            }
             Ok(result) => assert_eq!(result, 281),
         }
 

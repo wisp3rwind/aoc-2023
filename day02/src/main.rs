@@ -33,23 +33,21 @@ struct Draw {
 
 impl PartialOrd for Draw {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        if self.red == other.red && self.green == other.green && self.blue == other.blue
-            { Some(Ordering::Equal) } 
-        else if self.red <= other.red && self.green <= other.green && self.blue <= other.blue
-            { Some(Ordering::Less) }
-        else if self.red >= other.red && self.green >= other.green && self.blue >= other.blue
-            { Some(Ordering::Greater) }
-        else
-            { None }
-
+        if self.red == other.red && self.green == other.green && self.blue == other.blue {
+            Some(Ordering::Equal)
+        } else if self.red <= other.red && self.green <= other.green && self.blue <= other.blue {
+            Some(Ordering::Less)
+        } else if self.red >= other.red && self.green >= other.green && self.blue >= other.blue {
+            Some(Ordering::Greater)
+        } else {
+            None
+        }
     }
 }
 
 impl Draw {
-    fn contains_all<'a>(self, others: impl IntoIterator<Item=&'a Self>) -> bool {
-        others.into_iter()
-            .copied()
-            .all(|d| d <= self)
+    fn contains_all<'a>(self, others: impl IntoIterator<Item = &'a Self>) -> bool {
+        others.into_iter().copied().all(|d| d <= self)
     }
 
     fn union(self, other: Self) -> Self {
@@ -75,11 +73,13 @@ impl FromStr for Draw {
             let (count, color) = s.trim().split_once(" ").unwrap();
             let count = count.trim().parse::<usize>().unwrap();
             match color.trim() {
-                "red" => { out.red += count },
-                "green" => { out.green += count },
-                "blue" => { out.blue += count },
+                "red" => out.red += count,
+                "green" => out.green += count,
+                "blue" => out.blue += count,
                 _ => {
-                    return Err(AOCError::ParseError { msg: "unknown color".into() })
+                    return Err(AOCError::ParseError {
+                        msg: "unknown color".into(),
+                    })
                 }
             };
         }
@@ -102,9 +102,11 @@ impl FromStr for Data {
             .map(|l| {
                 let (id, draws) = l.split_once(":").unwrap();
                 let id = id
-                    .strip_prefix("Game").unwrap()
+                    .strip_prefix("Game")
+                    .unwrap()
                     .trim()
-                    .parse::<usize>().unwrap();
+                    .parse::<usize>()
+                    .unwrap();
                 let draws = draws
                     .split(";")
                     .map(Draw::from_str)
@@ -123,33 +125,36 @@ impl FromStr for Data {
 trait FromFile<D: FromStr<Err = AOCError>> {
     fn from_file(path: impl AsRef<Path>) -> AOCResult<D> {
         let path = path.as_ref();
-        Ok(
-            fs::read_to_string(path)
-            .map_err(|source| {
-                AOCError::IOError{source, path: Some(path.into())}
+        Ok(fs::read_to_string(path)
+            .map_err(|source| AOCError::IOError {
+                source,
+                path: Some(path.into()),
             })?
-            .parse::<D>()?
-        )
+            .parse::<D>()?)
     }
 }
 
 impl<D: FromStr<Err = AOCError>> FromFile<D> for D {}
 
-fn part1 (data: &Data) -> AOCResult<usize> {
-    let total = Draw { red: 12, green: 13, blue: 14 };
-    let sum = data.games.iter()
-        .map(|(&id, draws)| 
-            if total.contains_all(draws) { id } else { 0 }
-        )
+fn part1(data: &Data) -> AOCResult<usize> {
+    let total = Draw {
+        red: 12,
+        green: 13,
+        blue: 14,
+    };
+    let sum = data
+        .games
+        .iter()
+        .map(|(&id, draws)| if total.contains_all(draws) { id } else { 0 })
         .sum();
     Ok(sum)
 }
 
-fn part2 (data: &Data) -> AOCResult<usize> {
-    let total = data.games.iter()
-        .map(|(_, draws)| {
-            draws.iter().copied().reduce(Draw::union).unwrap()
-        })
+fn part2(data: &Data) -> AOCResult<usize> {
+    let total = data
+        .games
+        .iter()
+        .map(|(_, draws)| draws.iter().copied().reduce(Draw::union).unwrap())
         .map(Draw::power)
         .sum();
 
@@ -157,8 +162,10 @@ fn part2 (data: &Data) -> AOCResult<usize> {
 }
 
 fn main() -> AOCResult<()> {
-    let mut input_file = std::env::current_dir()
-        .map_err(|e| AOCError::IOError{source: e, path: None})?;
+    let mut input_file = std::env::current_dir().map_err(|e| AOCError::IOError {
+        source: e,
+        path: None,
+    })?;
     input_file.push("day02");
     input_file.push("data");
     input_file.push("input.txt");
@@ -186,13 +193,13 @@ mod test {
             fn $func() -> AOCResult<()> {
                 match $compute(&<$dtype>::from_file($datapath)?) {
                     Ok(result) => assert_eq!(result, $expected),
-                    Err(AOCError::NotYetSolved) => {},
-                    Err(e) => { return Err(e) },
+                    Err(AOCError::NotYetSolved) => {}
+                    Err(e) => return Err(e),
                 };
 
                 Ok(())
             }
-        }
+        };
     }
 
     aoc_test!(part1, "data/test1.txt", Data, super::part1, 8);

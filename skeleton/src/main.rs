@@ -32,14 +32,11 @@ impl FromStr for Data {
     type Err = AOCError;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let items = input
-            .lines()
-            .map(|l| l.to_owned())
-            .collect();
-            //.map(|l| l.parse::<u64>())
-            //.collect::<Result<_, _>>()
-            //.map_err(|_e| AOCError::ParseError { msg: "...".into() })?;
-        
+        let items = input.lines().map(|l| l.to_owned()).collect();
+        //.map(|l| l.parse::<u64>())
+        //.collect::<Result<_, _>>()
+        //.map_err(|_e| AOCError::ParseError { msg: "...".into() })?;
+
         Ok(Data { items })
     }
 }
@@ -47,29 +44,30 @@ impl FromStr for Data {
 trait FromFile<D: FromStr<Err = AOCError>> {
     fn from_file(path: impl AsRef<Path>) -> AOCResult<D> {
         let path = path.as_ref();
-        Ok(
-            fs::read_to_string(path)
-            .map_err(|source| {
-                AOCError::IOError{source, path: Some(path.into())}
+        Ok(fs::read_to_string(path)
+            .map_err(|source| AOCError::IOError {
+                source,
+                path: Some(path.into()),
             })?
-            .parse::<D>()?
-        )
+            .parse::<D>()?)
     }
 }
 
 impl<D: FromStr<Err = AOCError>> FromFile<D> for D {}
 
-fn part1 (data: &Data) -> AOCResult<i64> {
+fn part1(data: &Data) -> AOCResult<i64> {
     Err(AOCError::NotYetSolved)
 }
 
-fn part2 (data: &Data) -> AOCResult<i64> {
+fn part2(data: &Data) -> AOCResult<i64> {
     Err(AOCError::NotYetSolved)
 }
 
 fn main() -> AOCResult<()> {
-    let mut input_file = std::env::current_dir()
-        .map_err(|e| AOCError::IOError{source: e, path: None})?;
+    let mut input_file = std::env::current_dir().map_err(|e| AOCError::IOError {
+        source: e,
+        path: None,
+    })?;
     input_file.push("dayXX");
     input_file.push("data");
     input_file.push("input.txt");
@@ -97,13 +95,13 @@ mod test {
             fn $func() -> AOCResult<()> {
                 match $compute(&<$dtype>::from_file($datapath)?) {
                     Ok(result) => assert_eq!(result, $expected),
-                    Err(AOCError::NotYetSolved) => {},
-                    Err(e) => { return Err(e) },
+                    Err(AOCError::NotYetSolved) => {}
+                    Err(e) => return Err(e),
                 };
 
                 Ok(())
             }
-        }
+        };
     }
 
     aoc_test!(part1, "data/test1.txt", Data, super::part1, 0);
