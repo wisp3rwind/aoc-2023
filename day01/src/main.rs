@@ -180,10 +180,8 @@ mod test {
 
         match super::part1(&data) {
             Err(AOCError::NotYetSolved) => {}
-            Err(_e) => {
-                assert!(false)
-            }
             Ok(result) => assert_eq!(result, 142),
+            Err(e) => return Err(e),
         }
 
         Ok(())
@@ -201,10 +199,8 @@ mod test {
 
         match super::part2(&data) {
             Err(AOCError::NotYetSolved) => {}
-            Err(_e) => {
-                assert!(false)
-            }
             Ok(result) => assert_eq!(result, 281),
+            Err(e) => return Err(e),
         }
 
         Ok(())

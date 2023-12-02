@@ -69,8 +69,8 @@ impl FromStr for Draw {
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         let mut out = Draw::default();
 
-        for s in input.split(",") {
-            let (count, color) = s.trim().split_once(" ").unwrap();
+        for s in input.split(',') {
+            let (count, color) = s.trim().split_once(' ').unwrap();
             let count = count.trim().parse::<usize>().unwrap();
             match color.trim() {
                 "red" => out.red += count,
@@ -100,7 +100,7 @@ impl FromStr for Data {
         let games = input
             .lines()
             .map(|l| {
-                let (id, draws) = l.split_once(":").unwrap();
+                let (id, draws) = l.split_once(':').unwrap();
                 let id = id
                     .strip_prefix("Game")
                     .unwrap()
@@ -108,7 +108,7 @@ impl FromStr for Data {
                     .parse::<usize>()
                     .unwrap();
                 let draws = draws
-                    .split(";")
+                    .split(';')
                     .map(Draw::from_str)
                     .collect::<AOCResult<_>>();
                 match draws {
@@ -125,12 +125,12 @@ impl FromStr for Data {
 trait FromFile<D: FromStr<Err = AOCError>> {
     fn from_file(path: impl AsRef<Path>) -> AOCResult<D> {
         let path = path.as_ref();
-        Ok(fs::read_to_string(path)
+        fs::read_to_string(path)
             .map_err(|source| AOCError::IOError {
                 source,
                 path: Some(path.into()),
             })?
-            .parse::<D>()?)
+            .parse::<D>()
     }
 }
 
@@ -153,8 +153,8 @@ fn part1(data: &Data) -> AOCResult<usize> {
 fn part2(data: &Data) -> AOCResult<usize> {
     let total = data
         .games
-        .iter()
-        .map(|(_, draws)| draws.iter().copied().reduce(Draw::union).unwrap())
+        .values()
+        .map(|draws| draws.iter().copied().reduce(Draw::union).unwrap())
         .map(Draw::power)
         .sum();
 
