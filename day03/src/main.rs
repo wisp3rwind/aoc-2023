@@ -14,6 +14,7 @@ enum AOCError {
     },
 
     #[error("Failed to parse input {msg}")]
+    #[allow(unused)]
     ParseError { msg: Cow<'static, str> },
 
     #[error("This part of the puzzle is not yet implemented")]
@@ -51,49 +52,37 @@ impl FromStr for Data {
 
         let mut chars = Vec::new();
 
-        let mut store_id = |x: i32, y: i32, chars: &mut Vec<char>| -> AOCResult<()> {
+        let mut store_id = |x: i32, y: i32, chars: &mut Vec<char>| {
             let num_digits = chars.len() as i32;
             if num_digits == 0 {
-                return Ok(());
+                return;
             }
             let id: String = chars.drain(..).collect();
-            let id = id.parse::<u32>()
-                .map_err(
-                    |_| {
-                        AOCError::ParseError { msg: format!("not an integer '{}'", &id).into() }
-                    }
-                )?;
+            // Must be an integer since we only collect 0..9 into chars.
+            let id = id.parse::<u32>().unwrap();
             ids.push((id, false));
             let idx = ids.len() - 1;
             for offset in 1..=num_digits {
                 id_map.insert((x - offset, y), idx);
             }
-
-            Ok(())
         };
 
-        for (y, l) in input.lines().enumerate() {
-            let y = y as i32;
-            let mut x = 0;
-
-            for (xu, c) in l.chars().enumerate() {
-                x = xu as i32;
-
+        for (y, l) in (0i32..).zip(input.lines()) {
+            let mut it = (0i32..).zip(l.chars()).peekable();
+            while let Some((x, c)) = it.next() {
                 match c {
                     '.' => {},
                     '0'..='9' => {
                         chars.push(c);
-                        continue;
+                        // If the line ends here, the number also necessarily ends
+                        if let Some(_) = it.peek() { continue; }
                     },
                     _ => { parts.insert((x, y), c); }
                 }
 
                 // A number ended, parse and store it
-                store_id(x, y, &mut chars)?;
+                store_id(x, y, &mut chars);
             }
-
-            // Line ended, thus, number must also end
-            store_id(x, y, &mut chars)?;
         }
 
         Ok(Data { ids, id_map, parts })
@@ -126,27 +115,29 @@ fn part1(data: &mut Data) -> AOCResult<u64> {
     }
 
     Ok(data.ids.iter().copied()
-        .fold(0, |total, (id, is_part)| {
-            if is_part { id as u64 + total } else { total }
-        })
+        .map(|(id, is_part)| { if is_part { id as u64 } else { 0 } })
+        .sum()
     )
 }
 
-fn part2(data: &Data) -> AOCResult<i32> {
+fn part2(data: &Data) -> AOCResult<u32> {
+    let mut ids = Vec::new();
+
     Ok(data.parts.iter()
         .filter_map(|(loc, c)| if *c == '*' { Some(loc) } else { None })
         .map(|(x, y)| {
-            let mut ids = Vec::new();
+            // FIXME: Could avoid the sort&dedup by skipping one entry in
+            // x direction after finding a number
             for xi in (x - 1)..=(x + 1) {
                 for yi in (y - 1)..=(y + 1) {
                     if let Some(idx) = data.id_map.get(&(xi, yi)) {
-                        ids.push(data.ids[*idx].0 as i32); 
+                        ids.push(data.ids[*idx].0); 
                     }
                 }
             }
             ids.sort();
             ids.dedup();
-            if ids.len() == 2 { ids.drain(..).fold(1, |gear_ratio, id| gear_ratio * id) } else { 0 }
+            if ids.len() == 2 { ids.drain(..).product() } else { 0 }
         })
         .sum())
 }
