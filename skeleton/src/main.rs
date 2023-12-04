@@ -13,6 +13,7 @@ enum AOCError {
     },
 
     #[error("Failed to parse input {msg}")]
+    #[allow(unused)]
     ParseError { msg: Cow<'static, str> },
 
     #[error("This part of the puzzle is not yet implemented")]
@@ -44,12 +45,12 @@ impl FromStr for Data {
 trait FromFile<D: FromStr<Err = AOCError>> {
     fn from_file(path: impl AsRef<Path>) -> AOCResult<D> {
         let path = path.as_ref();
-        Ok(fs::read_to_string(path)
+        fs::read_to_string(path)
             .map_err(|source| AOCError::IOError {
                 source,
                 path: Some(path.into()),
             })?
-            .parse::<D>()?)
+            .parse::<D>()
     }
 }
 
@@ -89,7 +90,8 @@ mod test {
             $datapath:literal,
             $dtype:ty,
             $compute:path,
-            $expected:literal
+            $expected:expr
+            $(,)?  // allow (optional) trailing comma
         ) => {
             #[test]
             fn $func() -> AOCResult<()> {
