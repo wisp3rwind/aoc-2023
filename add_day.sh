@@ -5,6 +5,10 @@ set -e
 
 day=$1
 
+if [ -z $day ]; then
+    exit 1
+fi
+
 path="day$day"
 
 cp -a "skeleton" "$path"
