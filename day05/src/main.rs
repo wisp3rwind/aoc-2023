@@ -72,20 +72,36 @@ impl AMap {
     fn get_range(&self, start: usize, len: usize) -> Vec<(usize, usize)> {
         let mut out = Vec::new();
         let mut start = start;
-        let mut len = len;
-        while len > 0 {
+        let mut remaining = len;
+        let mut cur_len = 0;
+        while remaining > 0 {
+            //dbg!(start, remaining);
+            let mut next = usize::MAX;
             for MapInterval {len, src_start, dest_start} in &self.ranges {
+                if *src_start > start {
+                    next = next.min(*src_start);
+                }
                 if start >= *src_start && start < *src_start + *len {
-                    let cur_dest = *dest_start + start - *src_start;
-                    let cur_len = todo!();
+                    let offset = start - *src_start;
+                    let cur_dest = *dest_start + offset;
+                    cur_len = (len - offset).min(remaining);
+                    //dbg!(cur_dest, cur_len);
                     out.push((cur_dest, cur_len));
-                    let start = start + cur_len;
-                    let len = len - cur_len;
+                    break;
                 }
             }
 
-            todo!("handle not found case");
+            if cur_len == 0 {
+                cur_len = (next - start).min(remaining);
+                //dbg!(start, cur_len);
+                out.push((start, cur_len));
+            }
+            start = start + cur_len;
+            remaining = remaining - cur_len;
+            cur_len = 0;
         }
+
+        assert_eq!(len, out.iter().map(|(_, l)| l).sum());
 
         out
     }
@@ -185,6 +201,7 @@ fn part2(data: &Data) -> AOCResult<usize> {
     let mut ranges: Vec<_> = data.seeds.iter().copied().tuples().collect();
     let mut key = "seed";
     while key != "location" {
+        //dbg!(&ranges);
         let (dest, map) = &data.maps[key];
         key = dest;
         let mut new_ranges = Vec::new();
@@ -195,14 +212,22 @@ fn part2(data: &Data) -> AOCResult<usize> {
         }
         ranges = new_ranges;
     }
+    //dbg!(&ranges);
 
     for (start, _) in ranges.iter() {
         locations.insert(start);
     }
 
-    locations.iter().min().unwrap();
+    dbg!(&locations);
 
-    Err(AOCError::NotYetSolved)
+
+    Ok(
+        *locations
+        .iter()
+        .copied()
+        .min()
+        .unwrap()
+    )
 }
 
 fn main() -> AOCResult<()> {
