@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -23,44 +22,27 @@ enum AOCError {
 
 type AOCResult<T> = Result<T, AOCError>;
 
-#[derive(Clone, Debug)]
-struct Data {
-    items: Vec<String>,
-    //items: Vec<u64>,
+fn load_input(path: impl AsRef<Path>) -> AOCResult<String> {
+    let path = path.as_ref();
+    fs::read_to_string(path)
+        .map_err(|source| AOCError::IOError {
+            source,
+            path: Some(path.into()),
+        })
 }
 
-impl FromStr for Data {
-    type Err = AOCError;
-
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let items = input.lines().map(|l| l.to_owned()).collect();
-        //.map(|l| l.parse::<u64>())
-        //.collect::<Result<_, _>>()
-        //.map_err(|_e| AOCError::ParseError { msg: "...".into() })?;
-
-        Ok(Data { items })
-    }
+fn read_part1(input: &str) -> AOCResult<Vec<String>> {
+    Ok(input.lines()
+        .map(str::to_owned)
+        .collect()
+    )
 }
 
-trait FromFile<D: FromStr<Err = AOCError>> {
-    fn from_file(path: impl AsRef<Path>) -> AOCResult<D> {
-        let path = path.as_ref();
-        fs::read_to_string(path)
-            .map_err(|source| AOCError::IOError {
-                source,
-                path: Some(path.into()),
-            })?
-            .parse::<D>()
-    }
-}
-
-impl<D: FromStr<Err = AOCError>> FromFile<D> for D {}
-
-fn part1(data: &Data) -> AOCResult<i64> {
+fn part1(data: &Vec<String>) -> AOCResult<i64> {
     Err(AOCError::NotYetSolved)
 }
 
-fn part2(data: &Data) -> AOCResult<i64> {
+fn part2(data: &Vec<String>) -> AOCResult<i64> {
     Err(AOCError::NotYetSolved)
 }
 
@@ -73,9 +55,12 @@ fn main() -> AOCResult<()> {
     input_file.push("data");
     input_file.push("input.txt");
 
-    let data = Data::from_file(input_file)?;
-    println!("Part 1: {}", part1(&data)?);
-    println!("Part 2: {}", part2(&data)?);
+    let input = load_input(&input_file)?;
+
+    let data1 = read_part1(&input)?;
+    println!("Part 1: {:?}", part1(&data1)?);
+
+    println!("Part 2: {}", part2(&data1)?);
 
     Ok(())
 }
@@ -88,14 +73,15 @@ mod test {
         (
             $func:ident,
             $datapath:literal,
-            $dtype:ty,
+            $read_data:path,
             $compute:path,
             $expected:expr
             $(,)?  // allow (optional) trailing comma
         ) => {
             #[test]
             fn $func() -> AOCResult<()> {
-                match $compute(&<$dtype>::from_file($datapath)?) {
+                let input = load_input($datapath)?;
+                match $compute(&mut $read_data(&input)?) {
                     Ok(result) => assert_eq!(result, $expected),
                     Err(AOCError::NotYetSolved) => {}
                     Err(e) => return Err(e),
@@ -106,6 +92,6 @@ mod test {
         };
     }
 
-    aoc_test!(part1, "data/test1.txt", Data, super::part1, 0);
-    aoc_test!(part2, "data/test1.txt", Data, super::part2, 0);
+    aoc_test!(part1, "data/test1.txt", read_part1, super::part1, 0);
+    aoc_test!(part2, "data/test1.txt", read_part1, super::part2, 0);
 }
