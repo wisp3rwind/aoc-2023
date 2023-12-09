@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -24,25 +25,65 @@ type AOCResult<T> = Result<T, AOCError>;
 
 fn load_input(path: impl AsRef<Path>) -> AOCResult<String> {
     let path = path.as_ref();
-    fs::read_to_string(path)
-        .map_err(|source| AOCError::IOError {
-            source,
-            path: Some(path.into()),
+    fs::read_to_string(path).map_err(|source| AOCError::IOError {
+        source,
+        path: Some(path.into()),
+    })
+}
+
+struct Data {
+    path: String,
+    network: HashMap<String, (String, String)>,
+}
+
+fn read_part1(input: &str) -> AOCResult<Data> {
+    let mut lines = input.lines();
+
+    let path = lines
+        .next()
+        .expect("input truncated, path missing")
+        .to_owned();
+
+    let network = lines
+        .filter(|l| !l.is_empty())
+        .map(|l| {
+            let (from, to) = l.split_once('=').unwrap();
+            let (to_left, to_right) = to
+                .trim()
+                .strip_prefix('(')
+                .unwrap()
+                .strip_suffix(')')
+                .unwrap()
+                .split_once(',')
+                .unwrap();
+
+            (
+                from.trim().to_owned(),
+                (to_left.trim().to_owned(), to_right.trim().to_owned()),
+            )
         })
+        .collect();
+
+    Ok(Data { path, network })
 }
 
-fn read_part1(input: &str) -> AOCResult<Vec<String>> {
-    Ok(input.lines()
-        .map(str::to_owned)
-        .collect()
-    )
+fn part1(data: &Data) -> AOCResult<usize> {
+    let mut loc = "AAA";
+    let mut steps = 0;
+    let mut dirs = data.path.chars().cycle();
+    while loc != "ZZZ" {
+        let (next_left, next_right) = data.network.get(loc).expect("incomplete network map"); 
+        loc = match dirs.next() {
+            Some('L') => next_left,
+            Some('R') => next_right,
+            _ => panic!("Invalid path"),
+        };
+        steps += 1;
+    }
+    Ok(steps)
 }
 
-fn part1(data: &Vec<String>) -> AOCResult<i64> {
-    Err(AOCError::NotYetSolved)
-}
-
-fn part2(data: &Vec<String>) -> AOCResult<i64> {
+fn part2(data: &Data) -> AOCResult<i64> {
     Err(AOCError::NotYetSolved)
 }
 
@@ -92,6 +133,7 @@ mod test {
         };
     }
 
-    aoc_test!(part1, "data/test1.txt", read_part1, super::part1, 0);
-    aoc_test!(part2, "data/test1.txt", read_part1, super::part2, 0);
+    aoc_test!(part11, "data/test1.txt", read_part1, super::part1, 2);
+    aoc_test!(part12, "data/test2.txt", read_part1, super::part1, 6);
+    aoc_test!(part2, "data/test3.txt", read_part1, super::part2, 0);
 }
