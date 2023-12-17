@@ -51,7 +51,7 @@ struct HandWithJokers {
 impl Hand {
     fn typ(&self) -> HandType {
         let mut counts: HashMap<u8, u8> = HashMap::new();
-        self.hand.iter().for_each(|c| { *counts.entry(*c).or_insert(0) += 1; });
+        self.hand.iter().for_each(|c| { *counts.entry(*c).or_default() += 1; });
 
         match counts.values().copied().max().unwrap() {
             5 => HandType::FiveOfAKind,
@@ -82,7 +82,7 @@ impl Hand {
 impl HandWithJokers {
     fn typ(&self) -> HandType {
         let mut counts: HashMap<u8, u8> = HashMap::new();
-        self.hand.iter().for_each(|c| { *counts.entry(*c).or_insert(0) += 1; });
+        self.hand.iter().for_each(|c| { *counts.entry(*c).or_default() += 1; });
 
         let jack_count = counts.get(&1);
         match counts.values().copied().max().unwrap() {
