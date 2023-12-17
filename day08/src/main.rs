@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::collections::hash_map::{OccupiedEntry, VacantEntry, Entry};
 use std::fs;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -72,7 +73,7 @@ fn part1(data: &Data) -> AOCResult<usize> {
     let mut steps = 0;
     let mut dirs = data.path.chars().cycle();
     while loc != "ZZZ" {
-        let (next_left, next_right) = data.network.get(loc).expect("incomplete network map"); 
+        let (next_left, next_right) = data.network.get(loc).expect("incomplete network map");
         loc = match dirs.next() {
             Some('L') => next_left,
             Some('R') => next_right,
@@ -83,8 +84,78 @@ fn part1(data: &Data) -> AOCResult<usize> {
     Ok(steps)
 }
 
+fn part2_brute_force(data: &Data) -> AOCResult<i64> {
+    let mut locs: Vec<_> = data
+        .network
+        .keys()
+        .filter(|node| node.ends_with('A'))
+        .collect();
+    let mut steps = 0;
+    let mut dirs = data.path.chars().cycle();
+    //dbg!(&locs);
+    while locs.iter().any(|node| !node.ends_with('Z')) {
+        let dir = dirs.next();
+        locs.iter_mut().for_each(|loc| {
+            let (next_left, next_right) = data.network.get(*loc).expect("incomplete network map");
+            *loc = match dir {
+                Some('L') => next_left,
+                Some('R') => next_right,
+                _ => panic!("Invalid path"),
+            };
+        });
+        //dbg!(&locs);
+        steps += 1;
+        if steps > 1_000_000_000 {
+            panic!("infinite loop");
+        }
+    }
+    Ok(steps)
+}
+
 fn part2(data: &Data) -> AOCResult<i64> {
-    Err(AOCError::NotYetSolved)
+    //let steps = Vec::<i64>::new();
+    dbg!(data.path.len());
+    for start in data.network.keys().filter(|node| node.ends_with('A')) {
+        let mut loc = start;
+
+        // last encounter of each loc
+        let mut history: HashMap<String, usize> = Default::default();
+
+        let mut cycle_start = 0;
+        let mut cycle_len = 0;
+        let mut step = 0;
+        loop {
+            match history.entry(loc.to_owned()) {
+                Entry::Occupied(prev_encounter) => {
+                    let prev_encounter = *prev_encounter.get();
+                    cycle_start = prev_encounter;
+                    cycle_len = step - prev_encounter;
+                    dbg!(&history, loc);
+                    break;
+                },
+                Entry::Vacant(new) => { new.insert(step); }
+            };
+
+            for dir in data.path.chars() {
+                let (next_left, next_right) = data.network.get(loc).expect("incomplete network map");
+                loc = match dir {
+                    'L' => next_left,
+                    'R' => next_right,
+                    _ => panic!("Invalid path"),
+                };
+                dbg!(loc);
+                step += 1;
+            }
+
+            if step > 100_000 {
+                panic!("stuck");
+            }
+        }
+
+        dbg!(start, cycle_start, cycle_len);
+    }
+
+    Ok(-1)
 }
 
 fn main() -> AOCResult<()> {
@@ -135,5 +206,5 @@ mod test {
 
     aoc_test!(part11, "data/test1.txt", read_part1, super::part1, 2);
     aoc_test!(part12, "data/test2.txt", read_part1, super::part1, 6);
-    aoc_test!(part2, "data/test3.txt", read_part1, super::part2, 0);
+    aoc_test!(part2, "data/test3.txt", read_part1, super::part2, 6);
 }
