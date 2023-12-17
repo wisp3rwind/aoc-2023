@@ -15,3 +15,16 @@ My attempts at the Advent of Code '23, using over-engineered Rust solutions.
 - learned about the `HashMap.entry()` API for reasonably concise insert-or-update
 - code really blown up by just duplicating everything for part 2, but didn't bother to clean this up
 - in general, things could probably by shortened a lot by depending on lexsorting of tuples even more
+
+## Day 9
+
+Part 1
+- input: one time series per line
+- task: produce one extrapolation step
+    - produce finite differences
+    - iterate until observing a constant derivative
+    - extrapolate from there
+- output: sum of all extrapolated values
+
+Part 2
+- same same
