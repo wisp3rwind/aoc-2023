@@ -28,3 +28,13 @@ Part 1
 
 Part 2
 - same same
+
+## Day 10
+Part 1
+- easy enough, just follow the loop
+
+Part 2
+- possible strategy
+    - discover loop, mark by converting to some marker
+    - explore map from outside edges, coloring locations that we discovered already
+    - the "sqeezing between pipes" bit seems somewhat tricky. Maybe simply extend the map by inserting extra rows/columns between each of the given ones, and extend pipes that would connect accross these gaps, then apply to above approach?

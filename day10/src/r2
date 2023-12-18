@@ -1,0 +1,243 @@
+use std::borrow::Cow;
+use std::fs;
+use std::path::{Path, PathBuf};
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+enum AOCError {
+    #[error("Failed to read input: {path:?}")]
+    IOError {
+        source: std::io::Error,
+        path: Option<PathBuf>,
+    },
+
+    #[error("Failed to parse input {msg}")]
+    #[allow(unused)]
+    ParseError { msg: Cow<'static, str> },
+
+    #[error("This part of the puzzle is not yet implemented")]
+    #[allow(unused)]
+    NotYetSolved,
+}
+
+type AOCResult<T> = Result<T, AOCError>;
+
+fn load_input(path: impl AsRef<Path>) -> AOCResult<String> {
+    let path = path.as_ref();
+    fs::read_to_string(path)
+        .map_err(|source| AOCError::IOError {
+            source,
+            path: Some(path.into()),
+        })
+}
+
+fn read_part1(input: &str) -> AOCResult<Vec<Vec<char>>> {
+    Ok(input.lines()
+        .map(|l| l.chars().collect::<Vec<_>>())
+        .collect()
+    )
+}
+
+fn locate_start(data: &Vec<Vec<char>>) -> (usize, usize) {
+    for (irow, row) in data.iter().enumerate() {
+        if let Some(icol) = row.iter().position(|sym| *sym == 'S') {
+            return (irow, icol);
+        }
+    }
+    panic!("Start marker missing");
+}
+
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+fn possible_dirs(data: &Vec<Vec<char>>, irow: usize, icol: usize) -> (Direction, Direction) {
+    use Direction::*;
+
+    let sym = data[irow][icol];
+    match sym {
+        '-' => (Left, Right),
+        '|' => (Up, Down),
+        'F' => (Down, Right),
+        '7' => (Down, Left),
+        'J' => (Up, Left),
+        'L' => (Up, Right),
+        'S' => {
+            let mut dirs = Vec::new();
+            for dir in [Up, Down, Left, Right] {
+                if let Some(_) = dbg!(step(data, Location{irow, icol, dir})) {
+                    dirs.push(dir);
+                }
+            }
+
+            (dirs[0], dirs[1])
+        },
+        _ => panic!("Invalid map marker")
+    }
+}
+
+#[derive(PartialEq, Eq, Debug)]
+struct Location {
+    irow: usize,
+    icol: usize,
+    dir: Direction,
+}
+
+impl Location {
+    fn equal_position(self, other: &Self) -> bool {
+        self.irow == other.irow && self.icol == other.icol
+    }
+}
+
+fn step(data: &Vec<Vec<char>>, loc: Location) -> Option<Location> {
+    use Direction::*;
+    let mut next_row = loc.irow;
+    let mut next_col = loc.icol;
+    let nrows = data.len();
+    let ncols = data[0].len();
+    match loc.dir {
+        Left => {
+            if next_col == 0 {
+                return None;
+            }
+            next_col -= 1;
+        },
+        Right => {
+            if next_col + 1 == ncols {
+                return None;
+            }
+            next_col += 1;
+        },
+        Up => {
+            if next_row == 0 {
+                return None;
+            }
+            next_row -= 1;
+        },
+        Down => {
+            if next_row + 1 == nrows {
+                return None;
+            }
+            next_row += 1;
+        },
+    }
+
+    let sym = dbg!(data[next_row][next_col]);
+
+    let next_dir = match loc.dir {
+        Left => {
+            match sym {
+                'F' => Down,
+                'L' => Up,
+                '-' => Left,
+                _ => { return None; },
+            }
+        },
+        Right => {
+            match sym {
+                '7' => Down,
+                'J' => Up,
+                '-' => Right,
+                _ => { return None; },
+            }
+        },
+        Up => {
+            match sym {
+                'F' => Right,
+                '7' => Left,
+                '|' => Up,
+                _ => { return None; },
+            }
+        },
+        Down => {
+            match sym {
+                'J' => Left,
+                'L' => Right,
+                '|' => Down,
+                _ => { return None; },
+            }
+        },
+    };
+
+    dbg!(Some(Location { irow: next_row, icol: next_col, dir: next_dir }))
+}
+
+fn part1(data: &Vec<Vec<char>>) -> AOCResult<i64> {
+    let (irow, icol) = dbg!(locate_start(data));
+
+    let (dir1, dir2) = possible_dirs(data, irow, icol);
+    let mut loc1 = Location {irow, icol, dir: dir1};
+    let mut loc2 = Location {irow, icol, dir: dir2};
+
+    for istep in 0.. {
+        loc1 = step(data, loc1).unwrap();
+        if loc1.equal_position(&loc2) {
+            return Ok(istep);
+        }
+        loc2 = step(data, loc2).unwrap();
+        if loc1.equal_position(&loc2) {
+            return Ok(istep);
+        }
+    }
+
+    unreachable!();
+}
+
+fn part2(data: &Vec<Vec<char>>) -> AOCResult<i64> {
+    Err(AOCError::NotYetSolved)
+}
+
+fn main() -> AOCResult<()> {
+    let mut input_file = std::env::current_dir().map_err(|e| AOCError::IOError {
+        source: e,
+        path: None,
+    })?;
+    input_file.push("day10");
+    input_file.push("data");
+    input_file.push("input.txt");
+
+    let input = load_input(&input_file)?;
+
+    let data1 = read_part1(&input)?;
+    println!("Part 1: {:?}", part1(&data1)?);
+
+    println!("Part 2: {}", part2(&data1)?);
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    macro_rules! aoc_test {
+        (
+            $func:ident,
+            $datapath:literal,
+            $read_data:path,
+            $compute:path,
+            $expected:expr
+            $(,)?  // allow (optional) trailing comma
+        ) => {
+            #[test]
+            fn $func() -> AOCResult<()> {
+                let input = load_input($datapath)?;
+                match $compute(&mut $read_data(&input)?) {
+                    Ok(result) => assert_eq!(result, $expected),
+                    Err(AOCError::NotYetSolved) => {}
+                    Err(e) => return Err(e),
+                };
+
+                Ok(())
+            }
+        };
+    }
+
+    //aoc_test!(part11, "data/test1.txt", read_part1, super::part1, 4);
+    aoc_test!(part12, "data/test2.txt", read_part1, super::part1, 8);
+    aoc_test!(part2, "data/test1.txt", read_part1, super::part2, 0);
+}
